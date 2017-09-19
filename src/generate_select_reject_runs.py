@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--main-sample-range', nargs='*', type=int, required=True)
     parser.add_argument('--aux-sample-range', nargs='*', type=int, required=True)
-    #parser.add_argument('--main-dir', required=True)
+    parser.add_argument('--n-runs', type=int, default=1)
     #parser.add_argument('--aux-dir', required=True)
     args = parser.parse_args()
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         for main_size in args.main_sample_range:
             for aux_size in args.aux_sample_range:
                 curr_bilty = base_bilty.format(directory, lang, main_size, aux_size)
-                for run in range(n_runs):
+                for run in range(args.n_runs):
                     curr_bilty += base_log.format(lang, main_size, aux_size, run)
                     with open('runs/'+base_log.format(lang, main_size, aux_size)[10:]+'_{0}.format(run)'+'.sh', 'w') as out_f:
                         out_f.write(curr_slurm+curr_bilty)
