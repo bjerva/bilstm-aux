@@ -619,13 +619,14 @@ class NNTagger(object):
             num_sentences=0
             num_tokens=0
             task_id = 'task'+str(i)
+            task_num = i
             self.tasks_ids.append( task_id )
             if task_id not in task2tag2idx:
                 task2tag2idx[task_id] = {}
             for instance_idx, (words, tags) in enumerate(read_conll_file(folder_name)):
-                if task_id[-1] == '0' and num_sentences >= self.main_samples > 0:
+                if task_num == 0 and num_sentences >= self.main_samples > 0:
                     break
-                elif task_id[-1] == '1' and num_sentences >= self.aux_samples > 0:
+                elif task_num == 1 and num_sentences >= self.aux_samples > 0:
                     break
                 num_sentences += 1
                 instance_word_indices = [] #sequence of word indices
