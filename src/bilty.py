@@ -626,7 +626,7 @@ class NNTagger(object):
             for instance_idx, (words, tags) in enumerate(read_conll_file(folder_name)):
                 if task_num == 0 and num_sentences >= self.main_samples > 0:
                     break
-                elif task_num == 1 and num_sentences >= self.aux_samples > 0:
+                elif task_num == 1 and num_sentences >= self.aux_samples:
                     break
                 num_sentences += 1
                 instance_word_indices = [] #sequence of word indices
