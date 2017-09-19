@@ -32,7 +32,7 @@ def main():
     parser.add_argument("--h_layers", help="number of stacked LSTMs [default: 1 = no stacking]", required=False,type=int,default=1)
     parser.add_argument("--test", nargs='*', help="test file(s)", required=False) # should be in the same order/task as train
     parser.add_argument("--raw", help="if test file is in raw format (one sentence per line)", required=False, action="store_true", default=False)
-    parser.add_argument("--dev", help="dev file(s)", required=False) 
+    parser.add_argument("--dev", help="dev file(s)", required=False)
     parser.add_argument("--output", help="output predictions to file", required=False,default=None)
     parser.add_argument("--save", help="save model to file (appends .model as well as .pickle)", required=False,default=None)
     parser.add_argument("--embeds", help="word embeddings file", required=False, default=None)
@@ -56,13 +56,16 @@ def main():
     parser.add_argument("--initializer", help="initializer for embeddings (default: constant)", choices=INITIALIZER_MAP.keys(), default="constant")
     parser.add_argument("--builder", help="RNN builder (default: lstmc)", choices=BUILDERS.keys(), default="lstmc")
 
+
+    parser.add_argument("--main-samples", help="n samples from main task", default=0, type=int) # warning: non-deterministic results on GPU https://github.com/clab/dynet/issues/399
+    parser.add_argument("--aux-samples", help="n samples from aux task", default=0, type=int)
     args = parser.parse_args()
 
     if args.train:
         if not args.pred_layer:
             print("--pred_layer required!")
             exit()
-    
+
     if args.dynet_seed:
         print(">>> using seed: {} <<< ".format(args.dynet_seed), file=sys.stderr)
         np.random.seed(args.dynet_seed)
@@ -111,7 +114,9 @@ def main():
     if args.train and len( args.train ) != 0:
         tagger.fit(args.train, args.iters, args.trainer,
                    dev=args.dev, word_dropout_rate=args.word_dropout_rate,
-                   model_path=args.save, patience=args.patience, minibatch_size=args.minibatch_size)
+                   model_path=args.save, patience=args.patience, minibatch_size=args.minibatch_size,
+                   main_samples=args.main_samples,
+                   aux_samples=args.aux_samples)
         if args.save:
             save(tagger, args.save)
 
@@ -122,7 +127,7 @@ def main():
                 sys.exit()
 
         stdout = sys.stdout
-        # One file per test ... 
+        # One file per test ...
         for i, test in enumerate( args.test ):
 
             if args.output != None:
@@ -243,12 +248,13 @@ class NNTagger(object):
         self.w2i = w2i
         self.c2i = c2i
 
-    def fit(self, list_folders_name, num_iterations, learning_algo, learning_rate=0, dev=None, word_dropout_rate=0.0, model_path=None, patience=0, minibatch_size=0):
+    def fit(self, list_folders_name, num_iterations, learning_algo, learning_rate=0, dev=None, word_dropout_rate=0.0, model_path=None, patience=0, minibatch_size=0, main_samples=0, aux_samples=0):
         """
         train the tagger
         """
         print("read training data",file=sys.stderr)
-
+        self.main_samples = main_samples
+        self.aux_samples = aux_samples
         nb_tasks = len( list_folders_name )
 
         train_X, train_Y, task_labels, w2i, c2i, task2t2i = self.get_train_data(list_folders_name)
@@ -271,12 +277,12 @@ class NNTagger(object):
 
         # init lookup parameters and define graph
         print("build graph",file=sys.stderr)
-        
+
         num_words = len(self.w2i)
         num_chars = len(self.c2i)
-        
+
         assert(nb_tasks==len(self.pred_layer))
-        
+
         self.predictors, self.char_rnn, self.wembeds, self.cembeds = self.build_computation_graph(num_words, num_chars)
 
         if self.backprob_embeds == False:
@@ -341,7 +347,7 @@ class NNTagger(object):
 
 
             print("iter {2} {0:>12}: {1:.2f}".format("total loss",total_loss/total_tagged,iter), file=sys.stderr)
-            
+
             if dev:
                 # evaluate after every epoch
                 correct, total = self.evaluate(dev_X, dev_Y, org_X, org_Y, dev_task_labels)
@@ -394,7 +400,7 @@ class NNTagger(object):
         cembeds = None
         if self.c_in_dim > 0:
             cembeds = self.model.add_lookup_parameters((num_chars, self.c_in_dim), init=self.initializer)
-               
+
 
         # make it more flexible to add number of layers as specified by parameter
         layers = [] # inner layers
@@ -412,8 +418,8 @@ class NNTagger(object):
             if layer_num == 0:
                 if self.c_in_dim > 0:
                     # in_dim: size of each layer
-                    f_builder = self.builder(1, self.in_dim+self.c_in_dim*2, self.h_dim, self.model) 
-                    b_builder = self.builder(1, self.in_dim+self.c_in_dim*2, self.h_dim, self.model) 
+                    f_builder = self.builder(1, self.in_dim+self.c_in_dim*2, self.h_dim, self.model)
+                    b_builder = self.builder(1, self.in_dim+self.c_in_dim*2, self.h_dim, self.model)
                 else:
                     f_builder = self.builder(1, self.in_dim, self.h_dim, self.model)
                     b_builder = self.builder(1, self.in_dim, self.h_dim, self.model)
@@ -462,7 +468,7 @@ class NNTagger(object):
                 chars_of_word.append(self.c2i["</w>"])
                 word_char_indices.append(chars_of_word)
         return word_indices, word_char_indices
-                                                                                                                                
+
 
     def get_data_as_indices(self, folder_name, task, raw=False):
         """
@@ -508,7 +514,7 @@ class NNTagger(object):
             features = [dynet.concatenate([w,c,rev_c]) for w,c,rev_c in zip(wfeatures,char_emb,rev_char_emb)]
         else:
             features = wfeatures
-        
+
         if train: # only do at training time
             features = [dynet.noise(fe,self.noise_sigma) for fe in features]
 
@@ -523,14 +529,14 @@ class NNTagger(object):
 
         for i in range(0,num_layers):
             predictor = self.predictors["inner"][i]
-            forward_sequence, backward_sequence = predictor.predict_sequence(prev, prev_rev)        
+            forward_sequence, backward_sequence = predictor.predict_sequence(prev, prev_rev)
             if i > 0 and self.activation:
                 # activation between LSTM layers
                 forward_sequence = [self.activation(s) for s in forward_sequence]
                 backward_sequence = [self.activation(s) for s in backward_sequence]
 
             if i == output_expected_at_layer:
-                output_predictor = self.predictors["output_layers_dict"][task_id] 
+                output_predictor = self.predictors["output_layers_dict"][task_id]
                 concat_layer = [dynet.concatenate([f, b]) for f, b in zip(forward_sequence,reversed(backward_sequence))]
 
                 if train and self.noise_sigma > 0.0:
@@ -539,7 +545,7 @@ class NNTagger(object):
                 return output
 
             prev = forward_sequence
-            prev_rev = backward_sequence 
+            prev_rev = backward_sequence
 
         raise Exception("oops should not be here")
         return None
@@ -607,8 +613,8 @@ class NNTagger(object):
         c2i["_UNK"] = 0  # unk char
         c2i["<w>"] = 1   # word start
         c2i["</w>"] = 2  # word end index
-        
-        
+
+
         for i, folder_name in enumerate( list_folders_name ):
             num_sentences=0
             num_tokens=0
@@ -617,9 +623,13 @@ class NNTagger(object):
             if task_id not in task2tag2idx:
                 task2tag2idx[task_id] = {}
             for instance_idx, (words, tags) in enumerate(read_conll_file(folder_name)):
+                if task_id[-1] == '0' and num_sentences >= self.main_samples > 0:
+                    break
+                elif task_id[-1] == '1' and num_sentences >= self.aux_samples > 0:
+                    break
                 num_sentences += 1
                 instance_word_indices = [] #sequence of word indices
-                instance_char_indices = [] #sequence of char indices 
+                instance_char_indices = [] #sequence of char indices
                 instance_tags_indices = [] #sequence of tag indices
 
                 for i, (word, tag) in enumerate(zip(words, tags)):
@@ -638,7 +648,7 @@ class NNTagger(object):
                             chars_of_word.append(c2i[char])
                         chars_of_word.append(c2i["</w>"])
                         instance_char_indices.append(chars_of_word)
-                            
+
                     if tag not in task2tag2idx[task_id]:
                         task2tag2idx[task_id][tag]=len(task2tag2idx[task_id])
 
