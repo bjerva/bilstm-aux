@@ -7,7 +7,7 @@ Generate experiment runs for Select or Reject
 
 import argparse
 
-languages = '''UD_Ancient_Greek
+directories = '''UD_Ancient_Greek
 UD_Ancient_Greek-PROIEL
 UD_Arabic
 UD_Basque
@@ -71,6 +71,73 @@ UD_Ukrainian
 UD_Urdu
 UD_Uyghur
 UD_Vietnamese'''.split('\n')
+languages = '''grc
+grc_proiel
+ar
+eu
+bg
+ca
+zh
+hr
+cs
+cs_cac
+cs_cltt
+da
+nl
+nl_lassysmall
+en
+en_lines
+en_partut
+et
+fi
+fi_ftb
+fr
+fr_partut
+fr_sequoia
+gl
+gl_treegal
+de
+got
+el
+he
+hi
+hu
+id
+ga
+it
+it_partut
+ja
+kk
+ko
+la
+la_ittb
+la_proiel
+lv
+no_bokmaal
+no_nynorsk
+cu
+fa
+pl
+pt
+pt_br
+ro
+ru
+ru_syntagrus
+sk
+sl
+sl_sst
+es
+es_ancora
+sv
+sv_lines
+tr
+uk
+ur
+ug
+vi'''.split('\n')
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
@@ -106,8 +173,8 @@ if __name__ == '__main__':
 
 '''
     # 0: language
-    for directory in languages:
-        lang = directory[3:5].lower()
+    for idx, directory in enumerate(directories):
+        lang = languages[idx]
         curr_slurm = base_slurm.format(lang)
         for main_size in args.main_sample_range:
             for aux_size in args.aux_sample_range:
