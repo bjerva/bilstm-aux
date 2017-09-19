@@ -114,6 +114,6 @@ if __name__ == '__main__':
                 curr_bilty = base_bilty.format(directory, lang, main_size, aux_size)
                 for run in range(args.n_runs):
                     curr_bilty += base_log.format(lang, main_size, aux_size, run)
-                    with open('runs/'+base_log.format(lang, main_size, aux_size, run)[10:]+'_{0}.format(run)'+'.sh', 'w') as out_f:
+                    with open('runs/'+base_log.format(lang, main_size, aux_size, run)[10:]+'.sh', 'w') as out_f:
                         out_f.write(curr_slurm+curr_bilty)
                 #print(curr_slurm + curr_bilty)
