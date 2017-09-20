@@ -67,12 +67,12 @@ def main():
             exit()
 
     if args.dynet_seed:
-        print(">>> using seed: {} <<< ".format(args.dynet_seed), file=sys.stderr)
+        print(">>> using seed: {} <<< ".format(args.dynet_seed))#
         np.random.seed(args.dynet_seed)
         random.seed(args.dynet_seed)
 
     if args.c_in_dim == 0:
-        print(">>> disable character embeddings <<<", file=sys.stderr)
+        print(">>> disable character embeddings <<<")#
 
     if args.minibatch_size > 1:
         print(">>> using minibatch_size {} <<<".format(args.minibatch_size))
@@ -93,7 +93,7 @@ def main():
     start = time.time()
 
     if args.model:
-        print("loading model from file {}".format(args.model), file=sys.stderr)
+        print("loading model from file {}".format(args.model))#
         tagger = load(args)
     else:
         tagger = NNTagger(args.in_dim,
@@ -141,7 +141,7 @@ def main():
                                              output_predictions=args.output, raw=args.raw)
 
             if not args.raw:
-                print("\nTask%s test accuracy on %s items: %.4f" % (i, i+1, correct/total), file=sys.stderr)
+                print("\nTask%s test accuracy on %s items: %.4f" % (i, i+1, correct/total))#
             print(("Done. Took {0:.2f} seconds.".format(time.time()-start)),file=sys.stderr)
             sys.stdout = stdout
     if args.train:
@@ -180,7 +180,7 @@ def load(args):
         tagger.build_computation_graph(myparams["num_words"],
                                        myparams["num_chars"])
     tagger.model.populate(args.model)
-    print("model loaded: {}".format(args.model), file=sys.stderr)
+    print("model loaded: {}".format(args.model))#
     return tagger
 
 
@@ -208,7 +208,7 @@ def save(nntagger, model_path):
                 "builder": nntagger.builder,
                 }
     pickle.dump(myparams, open( modelname+".pickle", "wb" ) )
-    print("model stored: {}".format(modelname), file=sys.stderr)
+    print("model stored: {}".format(modelname))#
 
 
 class NNTagger(object):
@@ -261,7 +261,7 @@ class NNTagger(object):
 
         ## after calling get_train_data we have self.tasks_ids
         self.task2layer = {task_id: out_layer for task_id, out_layer in zip(self.tasks_ids, self.pred_layer)}
-        print("task2layer", self.task2layer, file=sys.stderr)
+        print("task2layer", self.task2layer)#
 
         # store mappings of words and tags to indices
         self.set_indices(w2i,c2i,task2t2i)
@@ -288,7 +288,7 @@ class NNTagger(object):
         if self.backprob_embeds == False:
             ## disable backprob into embeds (default: True)
             self.wembeds.set_updated(False)
-            print(">>> disable wembeds update <<< (is updated: {})".format(self.wembeds.is_updated()), file=sys.stderr)
+            print(">>> disable wembeds update <<< (is updated: {})".format(self.wembeds.is_updated()))#
 
         trainer_algo = TRAINER_MAP[learning_algo]
         if learning_rate > 0:
@@ -346,25 +346,25 @@ class NNTagger(object):
                     trainer.update()
 
 
-            print("iter {2} {0:>12}: {1:.2f}".format("total loss",total_loss/total_tagged,iter), file=sys.stderr)
+            print("iter {2} {0:>12}: {1:.2f}".format("total loss",total_loss/total_tagged,iter))#
 
             if dev:
                 # evaluate after every epoch
                 correct, total = self.evaluate(dev_X, dev_Y, org_X, org_Y, dev_task_labels)
                 val_accuracy = correct/total
-                print("\ndev accuracy: %.4f" % (val_accuracy), file=sys.stderr)
+                print("\ndev accuracy: %.4f" % (val_accuracy))#
 
                 if model_path is not None:
                     if val_accuracy > best_val_acc:
-                        print('Accuracy %.4f is better than best val accuracy %.4f.' % (val_accuracy, best_val_acc), file=sys.stderr)
+                        print('Accuracy %.4f is better than best val accuracy %.4f.' % (val_accuracy, best_val_acc))#
                         best_val_acc = val_accuracy
                         epochs_no_improvement = 0
                         save(self, model_path)
                     else:
-                        print('Accuracy %.4f is worse than best val loss %.4f.' % (val_accuracy, best_val_acc), file=sys.stderr)
+                        print('Accuracy %.4f is worse than best val loss %.4f.' % (val_accuracy, best_val_acc))#
                         epochs_no_improvement += 1
                     if epochs_no_improvement == patience:
-                        print('No improvement for %d epochs. Early stopping...' % epochs_no_improvement, file=sys.stderr)
+                        print('No improvement for %d epochs. Early stopping...' % epochs_no_improvement)#
                         break
 
 
@@ -374,7 +374,7 @@ class NNTagger(object):
         """
         ## initialize word embeddings
         if self.embeds_file:
-            print("loading embeddings", file=sys.stderr)
+            print("loading embeddings")#
             embeddings, emb_dim = load_embeddings_file(self.embeds_file)
             assert(emb_dim==self.in_dim)
             num_words=len(set(embeddings.keys()).union(set(self.w2i.keys()))) # initialize all with embeddings
@@ -390,7 +390,7 @@ class NNTagger(object):
                     self.w2i[word]=len(self.w2i.keys()) # add new word
                 wembeds.init_row(self.w2i[word], embeddings[word])
                 init+=1
-            print("initialized: {}".format(init), file=sys.stderr)
+            print("initialized: {}".format(init))#
 
         else:
             wembeds = self.model.add_lookup_parameters((num_words, self.in_dim), init=self.initializer)
@@ -660,11 +660,11 @@ class NNTagger(object):
                 task_labels.append(task_id)
 
             if num_sentences == 0 or num_tokens == 0:
-                sys.exit( "No data read from: "+folder_name )
+                print( "No data read from: "+folder_name )
 
             print("TASK "+task_id+" "+folder_name, file=sys.stderr )
-            print("%s sentences %s tokens" % (num_sentences, num_tokens), file=sys.stderr)
-            print("%s w features, %s c features " % (len(w2i),len(c2i)), file=sys.stderr)
+            print("%s sentences %s tokens" % (num_sentences, num_tokens))#
+            print("%s w features, %s c features " % (len(w2i),len(c2i)))#
 
         assert(len(X)==len(Y))
         return X, Y, task_labels, w2i, c2i, task2tag2idx  #sequence of features, sequence of labels, necessary mappings

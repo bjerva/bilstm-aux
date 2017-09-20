@@ -37,9 +37,9 @@ def read_conll_file(file_name, raw=False):
     """
     current_words = []
     current_tags = []
-    
+
     for line in codecs.open(file_name, encoding='utf-8'):
-        #line = line.strip()
+        line = line.strip()
         line = line[:-1]
 
         if line:
@@ -53,7 +53,7 @@ def read_conll_file(file_name, raw=False):
                     if len(line.split("\t")) == 1: # emtpy words in gimpel
                         raise IOError("Issue with input file - doesn't have a tag or token?")
                     else:
-                        print("erroneous line: {} (line number: {}) ".format(line), file=sys.stderr)
+                        print("erroneous line: {} (line number: {}) ".format(line))#
                         exit()
                 else:
                     word, tag = line.split('\t')
@@ -70,7 +70,7 @@ def read_conll_file(file_name, raw=False):
     if current_tags != [] and not raw:
         yield (current_words, current_tags)
 
-    
+
 if __name__=="__main__":
     allsents=[]
     unique_tokens=set()
@@ -81,4 +81,3 @@ if __name__=="__main__":
         unique_tokens_lower.update([w.lower() for w in words])
     assert(len(allsents)==4868)
     assert(len(unique_tokens)==17552)
-

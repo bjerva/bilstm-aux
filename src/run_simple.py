@@ -1,5 +1,5 @@
 #### Example of using bilty from within code
-## 
+##
 ## to properly seed dyNet add parameter to your script:
 ## python run_simply.py --dynet-seed 113
 
@@ -7,8 +7,8 @@ from simplebilty import SimpleBiltyTagger
 import random
 ### Use --dynet-seed $SEED
 seed=113 # assume we pass this to script
-train_data = "/Users/bplank/corpora/pos/ud1.3/orgtok/goldpos/da-ud-dev.conllu"
-dev_data = "/Users/bplank/corpora/pos/ud1.3/orgtok/goldpos/da-ud-test.conllu"
+train_data = "./data/da-ud-dev.conllu"
+dev_data = "./data/da-ud-test.conllu"
 in_dim=64
 h_dim=100
 c_in_dim=100
