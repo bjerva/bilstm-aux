@@ -662,7 +662,7 @@ class NNTagger(object):
             if num_sentences == 0 or num_tokens == 0:
                 print( "No data read from: "+folder_name )
 
-            print("TASK "+task_id+" "+folder_name, file=sys.stderr )
+            print("TASK "+task_id+" "+folder_name)#
             print("%s sentences %s tokens" % (num_sentences, num_tokens))#
             print("%s w features, %s c features " % (len(w2i),len(c2i)))#
 
