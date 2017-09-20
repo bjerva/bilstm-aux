@@ -142,7 +142,7 @@ def main():
 
             if not args.raw:
                 print("\nTask%s test accuracy on %s items: %.4f" % (i, i+1, correct/total))#
-            print(("Done. Took {0:.2f} seconds.".format(time.time()-start)),file=sys.stderr)
+            print(("Done. Took {0:.2f} seconds.".format(time.time()-start)))#
             sys.stdout = stdout
     if args.train:
         print("Info: biLSTM\n\t"+"\n\t".join(["{}: {}".format(a,v) for a, v in vars(args).items()
@@ -252,7 +252,7 @@ class NNTagger(object):
         """
         train the tagger
         """
-        print("read training data",file=sys.stderr)
+        print("read training data")#
         self.main_samples = main_samples
         self.aux_samples = aux_samples
         nb_tasks = len( list_folders_name )
@@ -276,7 +276,7 @@ class NNTagger(object):
             dev_X, dev_Y, org_X, org_Y, dev_task_labels = self.get_data_as_indices(dev, "task0")
 
         # init lookup parameters and define graph
-        print("build graph",file=sys.stderr)
+        print("build graph")#
 
         num_words = len(self.w2i)
         num_chars = len(self.c2i)
