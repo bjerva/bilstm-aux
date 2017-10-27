@@ -7,9 +7,11 @@ def filter_embeddings(fname, exclude_vocab):
     with open(fname, 'r', encoding='utf-8') as in_f:
         with open(fname+'.filtered', 'w', encoding='utf-8') as out_f:
             for line in in_f:
-                word, *rest = line.strip().split('\t')
-                if word not in exclude_vocab:
-                    out_f.write(line)
+                fields = line.strip().split()
+                if fields:
+                    word = fields[0]
+                    if word not in exclude_vocab:
+                        out_f.write(line)
 
 
 def read_vocab(fname):
