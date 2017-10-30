@@ -7,7 +7,7 @@ def load_embeddings_file(file_name, sep=" ",lower=False):
     load embeddings file
     """
     emb={}
-    for line in open(file_name, errors='ignore', encoding='utf-8'):
+    for line in codecs.open(file_name, encoding='utf-8'):
         try:
             fields = line.strip().split(sep)
             vec = [float(x) for x in fields[1:]]
@@ -40,7 +40,9 @@ def read_conll_file(file_name, raw=False):
 
     for line in codecs.open(file_name, encoding='utf-8'):
         line = line.strip()
-        line = line[:-1]
+        if line and line[0] == '[' and line[-1] == ']': continue
+        if 'colfix' not in file_name:
+            line = line[:-1]
 
         if line:
             if raw:
@@ -51,7 +53,12 @@ def read_conll_file(file_name, raw=False):
             else:
                 if len(line.split("\t")) != 2:
                     if len(line.split("\t")) == 1: # emtpy words in gimpel
-                        raise IOError("Issue with input file - doesn't have a tag or token?")
+                        word = line.split('\t')[0]
+                        tag = 'NOU'
+                        #print(line)
+                        #print(current_words)
+                        #print(current_tags)
+                        #raise IOError("Issue with input file - doesn't have a tag or token?")
                     else:
                         print("erroneous line: {} (line number: {}) ".format(line))#
                         exit()

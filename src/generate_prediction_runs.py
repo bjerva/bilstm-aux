@@ -148,17 +148,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     base_bilty = '''python -u src/bilty.py \
-    --train ~/data/{0}/{1}-ud-train.conllu.deprel  ~/data/{0}/oovsampleselnolim-{2}-{3}-train.conllu.pos \
-    --dev ~/data/{0}/{1}-ud-dev.conllu.deprel  \
-    --test ~/data/{0}/{1}-ud-dev.conllu.deprel  ~/data/{0}/{1}-ud-dev.conllu.pos  \
-    --pred_layer 1 1  --trainer adam --c_in_dim 0 \
-    --main-samples {2} \
-    --aux-samples {3} '''
+    --train ~/data/{0}/{1}-ud-train.conllu.pos \
+    --dev ~/data/{0}/{1}-ud-dev.conllu.pos  \
+    --test  /home/rvx618/data/ud-test-20170509/{1}.conllu.pos  \
+    --pred_layer 1  --trainer adam  \
+    --output /home/rvx618/data/ud-test-20170509/{1}.conllu.pos.pred'''
     #0: train language dir,
     #1: lang code
     #1: main samples,
     #2: aux sample
-    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_oovsampleselnolim'
+    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_predrun'
     #1: lang code
     #1: main samples,
     #2: aux samples
@@ -169,6 +168,7 @@ if __name__ == '__main__':
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --time=12:00:00
+#SBATCH --partition=image2
 
 '''
 #oovsamplesel-500-10000-train.conllu.pos

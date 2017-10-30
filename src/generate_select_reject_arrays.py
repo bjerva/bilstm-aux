@@ -136,7 +136,32 @@ ur
 ug
 vi'''.split('\n')
 
-
+emb_langs = '''ar
+bg
+ca
+cs
+da
+de
+el
+en
+es
+et
+eu
+fa
+fi
+fr
+ga
+he
+hi
+hr
+id
+it
+nl
+no
+pl
+pt
+sl
+sv'''.split('\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -146,19 +171,21 @@ if __name__ == '__main__':
     parser.add_argument('--n-runs', type=int, default=1)
     #parser.add_argument('--aux-dir', required=True)
     args = parser.parse_args()
-
+    
     base_bilty = '''python -u src/bilty.py \
-    --train ~/data/{0}/{1}-ud-train.conllu.deprel  ~/data/{0}/oovsampleselnolim-{2}-{3}-train.conllu.pos \
+    --train ~/data/{0}/{1}-ud-train.conllu.deprel  ~/data/{0}/{1}-ud-dev.conllu.pos \
     --dev ~/data/{0}/{1}-ud-dev.conllu.deprel  \
-    --test ~/data/{0}/{1}-ud-dev.conllu.deprel  ~/data/{0}/{1}-ud-dev.conllu.pos  \
+    --test /home/rvx618/data/ud-test-20170509/{1}.conllu.deprel ~/data/{0}/{1}-ud-dev.conllu.pos  \
     --pred_layer 1 1  --trainer adam --c_in_dim 0 \
     --main-samples {2} \
     --aux-samples {3} '''
+    #--embeds /home/rvx618/data/poly_a/{4}.polyglot.txt '''
     #0: train language dir,
     #1: lang code
-    #1: main samples,
-    #2: aux sample
-    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_oovsampleselnolim'
+    #2: main samples,
+    #3: aux sample
+    #4: emb lang code
+    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_auxdev_test'
     #1: lang code
     #1: main samples,
     #2: aux samples
@@ -168,19 +195,24 @@ if __name__ == '__main__':
 #SBATCH --job-name=SelRejMTL-{0}
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
+#SBATCH --array=0-4
+#SBATCH --partition=image2
+#SBATCH --nice=1200
 
 '''
 #oovsamplesel-500-10000-train.conllu.pos
     # 0: language
     for idx, directory in enumerate(directories):
         lang = languages[idx]
+        emb_lang_code = lang.split('_')[0]
+        if emb_lang_code not in emb_langs: continue
         curr_slurm = base_slurm.format(lang)
         for main_size in args.main_sample_range:
             for aux_size in args.aux_sample_range:
-                for run in range(args.n_runs):
-                    curr_bilty = base_bilty.format(directory, lang, main_size, aux_size)
-                    curr_bilty += base_log.format(lang, main_size, aux_size, run)
-                    with open('runs/'+base_log.format(lang, main_size, aux_size, run)[10:]+'.sh', 'w') as out_f:
-                        out_f.write(curr_slurm+curr_bilty)
+                #for run in range(args.n_runs):
+                curr_bilty = base_bilty.format(directory, lang, main_size+aux_size, 0, emb_lang_code)
+                curr_bilty += base_log.format(lang, main_size, aux_size, '$SLURM_ARRAY_TASK_ID')
+                with open('runs/'+base_log.format(lang, main_size, aux_size, 'arrays')[10:]+'.sh', 'w') as out_f:
+                    out_f.write(curr_slurm+curr_bilty)
                 #print(curr_slurm + curr_bilty)
