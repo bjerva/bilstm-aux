@@ -173,19 +173,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     base_bilty = '''python -u src/bilty.py \
-    --train ~/data/{0}/{1}-ud-train.conllu.deprel  ~/data/{0}/{1}-ud-dev.conllu.pos \
+    --train ~/data/{0}/{1}-ud-train.conllu.deprel  /home/rvx618/data/ud-test-20170509/{1}.conllu.pos.pred.task0.colfix \
     --dev ~/data/{0}/{1}-ud-dev.conllu.deprel  \
     --test /home/rvx618/data/ud-test-20170509/{1}.conllu.deprel ~/data/{0}/{1}-ud-dev.conllu.pos  \
     --pred_layer 1 1  --trainer adam --c_in_dim 0 \
     --main-samples {2} \
-    --aux-samples {3} '''
-    #--embeds /home/rvx618/data/poly_a/{4}.polyglot.txt '''
+    --aux-samples {3} \
+    --embeds /home/rvx618/data/poly_a/{4}.polyglot.txt.filtered '''
     #0: train language dir,
     #1: lang code
     #2: main samples,
     #3: aux sample
     #4: emb lang code
-    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_auxdev_test'
+    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_oovemb_silverpos'
     #1: lang code
     #1: main samples,
     #2: aux samples
@@ -205,13 +205,14 @@ if __name__ == '__main__':
     # 0: language
     for idx, directory in enumerate(directories):
         lang = languages[idx]
+        if len(lang.split('_')) != 1: continue
         emb_lang_code = lang.split('_')[0]
         if emb_lang_code not in emb_langs: continue
         curr_slurm = base_slurm.format(lang)
         for main_size in args.main_sample_range:
             for aux_size in args.aux_sample_range:
                 #for run in range(args.n_runs):
-                curr_bilty = base_bilty.format(directory, lang, main_size+aux_size, 0, emb_lang_code)
+                curr_bilty = base_bilty.format(directory, lang, main_size, aux_size, emb_lang_code)
                 curr_bilty += base_log.format(lang, main_size, aux_size, '$SLURM_ARRAY_TASK_ID')
                 with open('runs/'+base_log.format(lang, main_size, aux_size, 'arrays')[10:]+'.sh', 'w') as out_f:
                     out_f.write(curr_slurm+curr_bilty)

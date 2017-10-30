@@ -24,8 +24,6 @@ UD_Estonian
 UD_Finnish
 UD_Finnish-FTB
 UD_French
-UD_French-ParTUT
-UD_French-Sequoia
 UD_Galician
 UD_Galician-TreeGal
 UD_German
@@ -88,8 +86,6 @@ et
 fi
 fi_ftb
 fr
-fr_partut
-fr_sequoia
 gl
 gl_treegal
 de
@@ -160,6 +156,7 @@ sl
 sv'''.split('\n')
 
 def filter_embeddings(fname, exclude_vocab):
+    c = 0
     with open(fname, 'r', encoding='utf-8') as in_f:
         with open(fname+'.filtered', 'w', encoding='utf-8') as out_f:
             for line in in_f:
@@ -169,7 +166,9 @@ def filter_embeddings(fname, exclude_vocab):
                     if word not in exclude_vocab:
                         out_f.write(line)
                     else:
-                        print('skipping {0}'.format(word))
+                        c+= 1
+
+    print('skipped {0} words in {1}'.format(c, fname))
 
 def read_vocab(fname):
     vocab = set()
@@ -183,14 +182,19 @@ def read_vocab(fname):
 
 if __name__ == '__main__':
     embeds_file = '/home/rvx618/data/poly_a/{0}.polyglot.txt'
-    train_file = '~/data/{0}/{1}-ud-train.conllu.deprel'
-    test_file = '~/data/{0}/{1}-ud-dev.conllu.deprel'
+    train_file = '/home/rvx618/data/{0}/{1}-ud-train.conllu.deprel'
+    test_file = '/home/rvx618/data//{0}/{1}-ud-dev.conllu.deprel'
     for idx, directory in enumerate(directories):
         lang = languages[idx]
+        if len(lang.split('_')) != 1: continue
         emb_lang_code = lang.split('_')[0]
         if emb_lang_code not in emb_langs: continue
 
         train_vocab = read_vocab(train_file.format(directory, lang))
-        test_vocab = read_vocab(test_file.format(directory, lang))
+        try:
+            test_vocab = read_vocab(test_file.format(directory, lang))
+        except IOError:
+            print('error on {0}'.format(directory))
+            continue
         exclusion_vocab = test_vocab.difference(train_vocab)
         filter_embeddings(embeds_file.format(emb_lang_code), exclusion_vocab)
