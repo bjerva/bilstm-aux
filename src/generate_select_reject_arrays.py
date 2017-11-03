@@ -173,7 +173,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     base_bilty = '''python -u src/bilty.py \
-    --train ~/data/{0}/{1}-ud-train.conllu.deprel  /home/rvx618/data/ud-test-20170509/{1}.conllu.pos.pred.task0.colfix \
+    --train ~/data/{0}/{1}-ud-train.conllu.deprel  /home/rvx618/data/ud-test-20170509/{1}.conllu.pos \
     --dev ~/data/{0}/{1}-ud-dev.conllu.deprel  \
     --test /home/rvx618/data/ud-test-20170509/{1}.conllu.deprel ~/data/{0}/{1}-ud-dev.conllu.pos  \
     --pred_layer 1 1  --trainer adam --c_in_dim 0 \
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     #2: main samples,
     #3: aux sample
     #4: emb lang code
-    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_oovemb_silverpos'
+    base_log = ' > ~/logs/{3}/{0}_{1}_{2}_oovemb_extratrainflip'
     #1: lang code
     #1: main samples,
     #2: aux samples
@@ -198,7 +198,7 @@ if __name__ == '__main__':
 #SBATCH --time=24:00:00
 #SBATCH --array=0-4
 #SBATCH --partition=image2
-#SBATCH --nice=1200
+#SBATCH --nice=1000
 
 '''
 #oovsamplesel-500-10000-train.conllu.pos
