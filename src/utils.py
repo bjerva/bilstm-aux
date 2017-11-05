@@ -87,8 +87,8 @@ def read_conll_file(file_path, tasks=None, verbose=False):
             else:
                 # legend here: http://cemantix.org/data/ontonotes.html
                 doc_id, part_num, word_id, word_form, postag, parse_bit, lemma,\
-                    frameset_id, word_sense, speaker, ner_tag, *rest = \
-                    line.strip().split()
+                    frameset_id, word_sense, speaker, ner_tag, rest = \
+                    line.strip().split()[:12]
                 srl_tags, srl_bio_tag = [], None
 
                 # we only use the verb identification tags (not the ARG tags)
