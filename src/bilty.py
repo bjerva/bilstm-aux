@@ -115,7 +115,7 @@ def main():
                               builder=BUILDERS[args.builder],
                               main_samples=args.main_samples,
                               aux_samples=args.aux_samples,
-                              extratrain=extratrain
+                              extratrain=args.extratrain
                           )
 
     if args.train and len( args.train ) != 0:
@@ -665,9 +665,9 @@ class NNTagger(object):
 
 
         if self.extratrain:
-            n_samples = {'pos':self.aux_samples,'ner':self.main_samples}
+            n_samples = {'pos':0,'ner':self.main_samples+self.aux_samples}
         else:
-            n_samples = {'pos':1,'ner':self.main_samples+self.aux_samples}
+            n_samples = {'pos':self.aux_samples,'ner':self.main_samples}
 
         for i, folder_name in enumerate( list_folders_name ):
             num_sentences=0
@@ -677,6 +677,7 @@ class NNTagger(object):
             if 'ontonotes' in folder_name:
                 task2label2id=None
                 for task in [NER, POS]:
+                    if n_samples[task] == 0: continue
                     task_id = task#'task'+str(i)
                     task_num = i
                     self.tasks_ids.append( task_id )
