@@ -62,6 +62,7 @@ def main():
 
     parser.add_argument("--main-samples", help="n samples from main task", default=0, type=int) # warning: non-deterministic results on GPU https://github.com/clab/dynet/issues/399
     parser.add_argument("--aux-samples", help="n samples from aux task", default=0, type=int)
+    parser.add_argument("--extratrain", help="noise sigma", required=False, default=False, action='store_true')
     args = parser.parse_args()
 
     if args.train:
@@ -113,7 +114,8 @@ def main():
                               initializer=INITIALIZER_MAP[args.initializer],
                               builder=BUILDERS[args.builder],
                               main_samples=args.main_samples,
-                              aux_samples=args.aux_samples
+                              aux_samples=args.aux_samples,
+                              extratrain=extratrain
                           )
 
     if args.train and len( args.train ) != 0:
@@ -233,7 +235,7 @@ class NNTagger(object):
 
     def __init__(self,in_dim,h_dim,c_in_dim,h_layers,pred_layer,embeds_file=None,activation=ACTIVATION_MAP["tanh"],mlp=0,activation_mlp=ACTIVATION_MAP["rectify"],
                  backprob_embeds=True,noise_sigma=0.1, tasks_ids=[],initializer=INITIALIZER_MAP["glorot"], builder=BUILDERS["lstmc"],
-                 main_samples=-1,aux_samples=-1):
+                 main_samples=-1,aux_samples=-1,extratrain=False):
         self.w2i = {}  # word to index mapping
         self.c2i = {}  # char to index mapping
         self.tasks_ids = tasks_ids # list of names for each task
@@ -259,6 +261,7 @@ class NNTagger(object):
 
         self.main_samples = main_samples
         self.aux_samples = aux_samples
+        self.extratrain = extratrain
 
 
     def pick_neg_log(self, pred, gold):
@@ -661,7 +664,11 @@ class NNTagger(object):
         c2i["</w>"] = 2  # word end index
 
 
-        n_samples = {'pos':self.aux_samples,'ner':self.main_samples}
+        if self.extratrain:
+            n_samples = {'pos':self.aux_samples,'ner':self.main_samples}
+        else:
+            n_samples = {'pos':1,'ner':self.main_samples+self.aux_samples}
+
         for i, folder_name in enumerate( list_folders_name ):
             num_sentences=0
             num_tokens=0
