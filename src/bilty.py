@@ -141,7 +141,20 @@ def main():
 
             sys.stderr.write('\nTesting Task'+str(i)+'\n')
             sys.stderr.write('*******\n')
-            test_X, test_Y, org_X, org_Y, task_labels = tagger.get_data_as_indices(test, "task"+str(i), raw=args.raw)
+            if 'ontonotes' in test:
+                test_X, test_Y, org_X, org_Y, w2i, c2i, task_labels = utils.get_data([test.split('_')[1]], NER,
+                data_dir='../../data/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/test/',
+                word2id=tagger.w2i,
+                char2id=tagger.c2i,
+                task2label2id=tagger.task2tag2idx,
+                verbose=True,
+                train=False,
+                n_samples=tagger.aux_samples)
+
+                test_Y = [curr_Y['ner'] for curr_Y in test_Y]
+                task_labels = ['ner' for _ in range(len(test_X))]
+            else:
+                test_X, test_Y, org_X, org_Y, task_labels = tagger.get_data_as_indices(test, "task"+str(i), raw=args.raw)
             correct, total = tagger.evaluate(test_X, test_Y, org_X, org_Y, task_labels,
                                              output_predictions=args.output, raw=args.raw)
 
@@ -297,8 +310,8 @@ class NNTagger(object):
                 train=False,
                 n_samples=self.aux_samples)
 
-                dev_Y = [curr_Y['pos'] for curr_Y in dev_Y]
-                dev_task_labels = ['pos' for _ in range(len(dev_Y))]
+                dev_Y = [curr_Y['ner'] for curr_Y in dev_Y]
+                dev_task_labels = ['ner' for _ in range(len(dev_Y))]
 
 
             else:
