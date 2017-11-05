@@ -20,6 +20,9 @@ from lib.mnnl import FFSequencePredictor, Layer, RNNSequencePredictor, BiRNNSequ
 from lib.mio import read_conll_file, load_embeddings_file
 from lib.mmappers import TRAINER_MAP, ACTIVATION_MAP, INITIALIZER_MAP, BUILDERS
 
+import utils
+from constants import *
+
 def main():
     parser = argparse.ArgumentParser(description="""Run the NN tagger""")
     parser.add_argument("--train", nargs='*', help="train folder for each task") # allow multiple train files, each asociated with a task = position in the list
@@ -109,6 +112,8 @@ def main():
                               backprob_embeds=args.disable_backprob_embeds,
                               initializer=INITIALIZER_MAP[args.initializer],
                               builder=BUILDERS[args.builder],
+                              main_samples=args.main_samples,
+                              aux_samples=args.aux_samples
                           )
 
     if args.train and len( args.train ) != 0:
@@ -214,7 +219,8 @@ def save(nntagger, model_path):
 class NNTagger(object):
 
     def __init__(self,in_dim,h_dim,c_in_dim,h_layers,pred_layer,embeds_file=None,activation=ACTIVATION_MAP["tanh"],mlp=0,activation_mlp=ACTIVATION_MAP["rectify"],
-                 backprob_embeds=True,noise_sigma=0.1, tasks_ids=[],initializer=INITIALIZER_MAP["glorot"], builder=BUILDERS["lstmc"]):
+                 backprob_embeds=True,noise_sigma=0.1, tasks_ids=[],initializer=INITIALIZER_MAP["glorot"], builder=BUILDERS["lstmc"],
+                 main_samples=-1,aux_samples=-1):
         self.w2i = {}  # word to index mapping
         self.c2i = {}  # char to index mapping
         self.tasks_ids = tasks_ids # list of names for each task
@@ -238,6 +244,9 @@ class NNTagger(object):
         self.char_rnn = None # biRNN for character input
         self.builder = builder # default biRNN is an LSTM
 
+        self.main_samples = main_samples
+        self.aux_samples = aux_samples
+
 
     def pick_neg_log(self, pred, gold):
         return -dynet.log(dynet.pick(pred, gold))
@@ -255,9 +264,12 @@ class NNTagger(object):
         print("read training data")#
         self.main_samples = main_samples
         self.aux_samples = aux_samples
-        nb_tasks = len( list_folders_name )
+        nb_tasks = 2#len( list_folders_name )
 
         train_X, train_Y, task_labels, w2i, c2i, task2t2i = self.get_train_data(list_folders_name)
+        if 'ontonotes' in list_folders_name[0]:
+            train_Y = [curr_Y['pos'] if 'pos' in curr_Y else curr_Y['ner'] for curr_Y in train_Y]
+
 
         ## after calling get_train_data we have self.tasks_ids
         self.task2layer = {task_id: out_layer for task_id, out_layer in zip(self.tasks_ids, self.pred_layer)}
@@ -269,11 +281,28 @@ class NNTagger(object):
         # if we use word dropout keep track of counts
         if word_dropout_rate > 0.0:
             widCount = Counter()
+            # if 'ontonotes' in list_folders_name[0]:
+            #     train_X = train_X[0]
             for sentence, _ in train_X:
                 widCount.update([w for w in sentence])
 
         if dev:
-            dev_X, dev_Y, org_X, org_Y, dev_task_labels = self.get_data_as_indices(dev, "task0")
+            if 'ontonotes' in dev:
+                dev_X, dev_Y, org_X, org_Y, w2i, c2i, task2label2id = utils.get_data([dev.split('_')[1]], NER,
+                data_dir='../../data/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/development/',
+                word2id=w2i,
+                char2id=c2i,
+                task2label2id=task2t2i,
+                verbose=True,
+                train=False,
+                n_samples=self.aux_samples)
+
+                dev_Y = [curr_Y['pos'] for curr_Y in dev_Y]
+                dev_task_labels = ['pos' for _ in range(len(dev_Y))]
+
+
+            else:
+                dev_X, dev_Y, org_X, org_Y, dev_task_labels = self.get_data_as_indices(dev, 'task0')
 
         # init lookup parameters and define graph
         print("build graph")#
@@ -306,7 +335,6 @@ class NNTagger(object):
             print('Using early stopping with patience of %d...' % patience)
 
         batch = []
-
         for iter in range(num_iterations):
 
             total_loss=0.0
@@ -314,14 +342,18 @@ class NNTagger(object):
             random.shuffle(train_data)
             for ((word_indices,char_indices),y, task_of_instance) in train_data:
 
+
                 if word_dropout_rate > 0.0:
                     word_indices = [self.w2i["_UNK"] if
                                         (random.random() > (widCount.get(w)/(word_dropout_rate+widCount.get(w))))
                                         else w for w in word_indices]
 
+
                 if minibatch_size > 1:
                     # accumulate instances for minibatch update
+
                     output = self.predict(word_indices, char_indices, task_of_instance, train=True)
+
                     total_tagged += len(word_indices)
 
                     loss1 = dynet.esum([self.pick_neg_log(pred,gold) for pred, gold in zip(output, y)])
@@ -334,12 +366,13 @@ class NNTagger(object):
                         dynet.renew_cg()  # use new computational graph for each BATCH when batching is active
                         batch = []
                 else:
-                    dynet.renew_cg() # new graph per item
+                    #dynet.renew_cg() # new graph per item
                     output = self.predict(word_indices, char_indices, task_of_instance, train=True)
                     total_tagged += len(word_indices)
-
                     loss1 = dynet.esum([self.pick_neg_log(pred,gold) for pred, gold in zip(output, y)])
+
                     lv = loss1.value()
+
                     total_loss += lv
 
                     loss1.backward()
@@ -615,49 +648,77 @@ class NNTagger(object):
         c2i["</w>"] = 2  # word end index
 
 
+        n_samples = {'pos':self.aux_samples,'ner':self.main_samples}
         for i, folder_name in enumerate( list_folders_name ):
             num_sentences=0
             num_tokens=0
-            task_id = 'task'+str(i)
-            task_num = i
-            self.tasks_ids.append( task_id )
-            if task_id not in task2tag2idx:
-                task2tag2idx[task_id] = {}
-            for instance_idx, (words, tags) in enumerate(read_conll_file(folder_name)):
-                if task_num == 0 and num_sentences >= self.main_samples > 0:
-                    break
-                elif self.aux_samples != -1 and task_num == 1 and num_sentences >= self.aux_samples:
-                    break
-                num_sentences += 1
-                instance_word_indices = [] #sequence of word indices
-                instance_char_indices = [] #sequence of char indices
-                instance_tags_indices = [] #sequence of tag indices
 
-                for i, (word, tag) in enumerate(zip(words, tags)):
-                    num_tokens += 1
 
-                    # map words and tags to indices
-                    if word not in w2i:
-                        w2i[word] = len(w2i)
-                    instance_word_indices.append(w2i[word])
+            if 'ontonotes' in folder_name:
+                task2label2id=None
+                for task in [NER, POS]:
+                    task_id = task#'task'+str(i)
+                    task_num = i
+                    self.tasks_ids.append( task_id )
+                    if task_id not in task2tag2idx:
+                        task2tag2idx[task_id] = {}
+                    dom_X, dom_Y, org_X, org_Y, w2i, c2i, task2label2id = utils.get_data([folder_name.split('_')[1]], [task],
+                    data_dir='../../data/conll-formatted-ontonotes-5.0-12/conll-formatted-ontonotes-5.0/data/train/',
+                    word2id=w2i,
+                    char2id=c2i,
+                    task2label2id=task2label2id,
+                    verbose=True,
+                    n_samples=n_samples[task])
+                    X.extend(dom_X)
+                    Y.extend(dom_Y)
+                    for _ in X:
+                        task_labels.append(task_id)
 
-                    if self.c_in_dim > 0:
-                        chars_of_word = [c2i["<w>"]]
-                        for char in word:
-                            if char not in c2i:
-                                c2i[char] = len(c2i)
-                            chars_of_word.append(c2i[char])
-                        chars_of_word.append(c2i["</w>"])
-                        instance_char_indices.append(chars_of_word)
+                    task2tag2idx[task_id] = task2label2id[task_id]
+                # domains, task_names, word2id=None, char2id=None,
+                #              task2label2id=None, data_dir=None, train=True, verbose=False
 
-                    if tag not in task2tag2idx[task_id]:
-                        task2tag2idx[task_id][tag]=len(task2tag2idx[task_id])
+            else:
+                task_id = 'task'+str(i)
+                task_num = i
+                self.tasks_ids.append( task_id )
+                if task_id not in task2tag2idx:
+                    task2tag2idx[task_id] = {}
+                for instance_idx, (words, tags) in enumerate(read_conll_file(folder_name)):
+                    if task_num == 0 and num_sentences >= self.main_samples > 0:
+                        break
+                    elif self.aux_samples != -1 and task_num == 1 and num_sentences >= self.aux_samples:
+                        break
+                    num_sentences += 1
+                    instance_word_indices = [] #sequence of word indices
+                    instance_char_indices = [] #sequence of char indices
+                    instance_tags_indices = [] #sequence of tag indices
 
-                    instance_tags_indices.append(task2tag2idx[task_id].get(tag))
+                    for i, (word, tag) in enumerate(zip(words, tags)):
+                        num_tokens += 1
 
-                X.append((instance_word_indices, instance_char_indices)) # list of word indices, for every word list of char indices
-                Y.append(instance_tags_indices)
-                task_labels.append(task_id)
+                        # map words and tags to indices
+                        if word not in w2i:
+                            w2i[word] = len(w2i)
+                        instance_word_indices.append(w2i[word])
+
+                        if self.c_in_dim > 0:
+                            chars_of_word = [c2i["<w>"]]
+                            for char in word:
+                                if char not in c2i:
+                                    c2i[char] = len(c2i)
+                                chars_of_word.append(c2i[char])
+                            chars_of_word.append(c2i["</w>"])
+                            instance_char_indices.append(chars_of_word)
+
+                        if tag not in task2tag2idx[task_id]:
+                            task2tag2idx[task_id][tag]=len(task2tag2idx[task_id])
+
+                        instance_tags_indices.append(task2tag2idx[task_id].get(tag))
+
+                    X.append((instance_word_indices, instance_char_indices)) # list of word indices, for every word list of char indices
+                    Y.append(instance_tags_indices)
+                    task_labels.append(task_id)
 
             if num_sentences == 0 or num_tokens == 0:
                 print( "No data read from: "+folder_name )

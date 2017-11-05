@@ -160,7 +160,7 @@ def read_file(file_path, tasks, verbose=False):
 
 
 def get_data(domains, task_names, word2id=None, char2id=None,
-             task2label2id=None, data_dir=None, train=True, verbose=False):
+             task2label2id=None, data_dir=None, train=True, verbose=False, n_samples=-1):
     """
     :param domains: a list of domains from which to obtain the data
     :param task_names: a list of task names
@@ -186,10 +186,10 @@ def get_data(domains, task_names, word2id=None, char2id=None,
 
     # for training, we initialize all mappings; for testing, we require mappings
     if train:
-        assert word2id is None, ('Error: Word-to-id mapping should not be '
-                                 'provided for training.')
-        assert char2id is None, ('Error: Character-to-id mapping should not '
-                                 'be provided for training.')
+        # assert word2id is None, ('Error: Word-to-id mapping should not be '
+                                #  'provided for training.')
+        # assert char2id is None, ('Error: Character-to-id mapping should not '
+                                #  'be provided for training.')
 
         # create word-to-id, character-to-id, and task-to-label-to-id mappings
         word2id, char2id = {}, {}
@@ -221,6 +221,7 @@ def get_data(domains, task_names, word2id=None, char2id=None,
         file_reader = iter(())
         domain_path = os.path.join(data_dir, 'data', 'english',
                                    'annotations', domain)
+
         assert os.path.exists(domain_path), ('Domain path %s does not exist.'
                                              % domain_path)
         # read files in the domain path and add the file reader to the generator
@@ -242,6 +243,8 @@ def get_data(domains, task_names, word2id=None, char2id=None,
         # the file reader should returns a list of CoNLL entries; we then get
         # the relevant labels for each task
         for sentence_idx, conll_entries in enumerate(file_reader):
+            if num_sentences >= n_samples:
+                break
             num_sentences += 1
             sentence_word_indices = []  # sequence of word indices
             sentence_char_indices = []  # sequence of char indices
@@ -309,6 +312,7 @@ def get_data(domains, task_names, word2id=None, char2id=None,
             if len(task_names) == 1 and task_names[0] == SRL:
                 if len(sentence_task2label_indices) == 0:
                     continue
+
             assert len(sentence_task2label_indices) > 0,\
                 'Error: No label/task available for entry.'
             X.append((sentence_word_indices, sentence_char_indices))
